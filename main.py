@@ -9,7 +9,7 @@ def fetch_stock_data(ticker, start_date, end_date):
     data = yfinance.download(ticker, start=start_date, end=end_date)
     return data['Close']
 
-# Using Gaussian HMM for now
+# Using Gaussian HMM for now number of state = 3
 def fit_hmm_model(prices, n_states=3):
     log_returns = np.log(prices / prices.shift(1)).dropna()
     X = log_returns.values.reshape(-1, 1)
@@ -33,6 +33,113 @@ def fit_hmm_model(prices, n_states=3):
     hidden_states = model.predict(X)
     
     return model, hidden_states, log_returns
+
+
+# STATE: 2
+def fit_hmm_model_2(prices, n_states=2):
+    log_returns = np.log(prices / prices.shift(1)).dropna()
+    X = log_returns.values.reshape(-1, 1)
+    
+    best_score = -np.inf
+    best_model = None
+
+    # Try multiple random initializations to avoid local minima
+    for i in range(10):
+        temp_model = hmm.GaussianHMM(n_components=n_states, covariance_type="diag", n_iter=1000, random_state=i)
+        temp_model.fit(X)
+    
+        score = temp_model.score(X)
+        if score > best_score:
+            best_score = score
+            best_model = temp_model
+
+    model = best_model
+    
+    # Viterbi algorithm
+    hidden_states = model.predict(X)
+    
+    return model, hidden_states, log_returns
+
+# STATE: 5
+def fit_hmm_model_5(prices, n_states=5):
+    log_returns = np.log(prices / prices.shift(1)).dropna()
+    X = log_returns.values.reshape(-1, 1)
+    
+    best_score = -np.inf
+    best_model = None
+
+    # Try multiple random initializations to avoid local minima
+    for i in range(10):
+        temp_model = hmm.GaussianHMM(n_components=n_states, covariance_type="diag", n_iter=1000, random_state=i)
+        temp_model.fit(X)
+    
+        score = temp_model.score(X)
+        if score > best_score:
+            best_score = score
+            best_model = temp_model
+
+    model = best_model
+    
+    # Viterbi algorithm
+    hidden_states = model.predict(X)
+    
+    return model, hidden_states, log_returns
+
+# INTERPRET AND GRAPH for 5 states
+def interpret_and_graph_state_5(model, hidden_states, prices, returns):
+    variances = np.array([model.covars_[i][0][0] for i in range(model.n_components)])
+    std_deviations = np.sqrt(variances)
+    sorted_indices = np.argsort(std_deviations)
+    
+    map_states = {old: new for new, old in enumerate(sorted_indices)}
+    new_states = []
+    
+    for hidden_state in hidden_states:
+        new_states.append(map_states[hidden_state])
+    new_states = np.array(new_states)
+    print(hidden_states)
+
+    colors = ['green', 'lightgreen', 'orange', 'red', 'darkred']
+    plt.figure(figsize=(15, 8))
+    
+    dates = returns.index
+    prices = prices.loc[dates]
+    
+    for state in range(model.n_components):
+        mask = (new_states == state)
+        plt.scatter(dates[mask], prices[mask], color=colors[state])
+        
+    plt.savefig("hmm_states_5.png")
+
+
+def interpret_and_graph_state_2(model, hidden_states, prices, returns):
+    variances = np.array([model.covars_[i][0][0] for i in range(model.n_components)])
+    std_deviations = np.sqrt(variances)
+    sorted_indices = np.argsort(std_deviations)
+    
+    map_states = {old: new for new, old in enumerate(sorted_indices)}
+    new_states = []
+    
+    for hidden_state in hidden_states:
+        new_states.append(map_states[hidden_state])
+    new_states = np.array(new_states)
+    print(hidden_states)
+
+    colors = ['green', 'red']
+    plt.figure(figsize=(15, 8))
+    
+    dates = returns.index
+    prices = prices.loc[dates]
+    
+    for state in range(model.n_components):
+        mask = (new_states == state)
+        plt.scatter(dates[mask], prices[mask], color=colors[state])
+        
+    plt.savefig("hmm_states_2.png")
+
+
+
+# let's make another hmm with sa
 
 def interpret_and_graph(model, hidden_states, prices, returns):
     variances = np.array([model.covars_[i][0][0] for i in range(model.n_components)])
@@ -68,3 +175,11 @@ if __name__ == "__main__":
     
     model, hidden_states, returns = fit_hmm_model(prices)
     interpret_and_graph(model, hidden_states, prices, returns)
+
+    #for 5 state
+    model, hidden_states, returns = fit_hmm_model_5(prices)
+    interpret_and_graph_state_5(model, hidden_states, prices, returns)
+
+    #for 2 state
+    model, hidden_states, returns = fit_hmm_model_2(prices)
+    interpret_and_graph_state_2(model, hidden_states, prices, returns)
