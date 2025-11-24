@@ -14,11 +14,20 @@ def fit_hmm_model(prices, n_states=3):
     log_returns = np.log(prices / prices.shift(1)).dropna()
     X = log_returns.values.reshape(-1, 1)
     
-    model = hmm.GaussianHMM(n_components=n_states, covariance_type="diag", n_iter=10000)
+    best_score = -np.inf
+    best_model = None
+
+    # Try multiple random initializations to avoid local minima
+    for i in range(10):
+        temp_model = hmm.GaussianHMM(n_components=n_states, covariance_type="diag", n_iter=1000, random_state=i)
+        temp_model.fit(X)
     
-    # Run EM algorithm to fit data
-    print("Fitting HMM to data...")
-    model.fit(X)
+        score = temp_model.score(X)
+        if score > best_score:
+            best_score = score
+            best_model = temp_model
+
+    model = best_model
     
     # Viterbi algorithm
     hidden_states = model.predict(X)
