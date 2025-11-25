@@ -110,6 +110,29 @@ def interpret_and_graph_state_5(model, hidden_states, prices, returns):
         
     plt.savefig("hmm_states_5.png")
 
+def interpret_and_graph_test(model, hidden_states, prices, returns):
+    variances = np.array([model.covars_[i][0][0] for i in range(model.n_components)])
+    std_deviations = np.sqrt(variances)
+    sorted_indices = np.argsort(std_deviations)
+    
+    map_states = {old: new for new, old in enumerate(sorted_indices)}
+    new_states = []
+    
+    for hidden_state in hidden_states:
+        new_states.append(map_states[hidden_state])
+    new_states = np.array(new_states)
+
+    colors = ['green', 'orange', 'red']
+    plt.figure(figsize=(15, 8))
+    
+    dates = returns.index
+    prices = prices.loc[dates]
+    
+    for state in range(model.n_components):
+        mask = (new_states == state)
+        plt.scatter(dates[mask], prices[mask], color=colors[state])
+        
+    plt.savefig("hmm_states_test.png")
 
 def interpret_and_graph_state_2(model, hidden_states, prices, returns):
     variances = np.array([model.covars_[i][0][0] for i in range(model.n_components)])
@@ -167,6 +190,14 @@ if __name__ == "__main__":
     ticker = "NVDA"
     start_date = "2022-01-01"
     end_date = "2025-01-01"
+
+
+    #test the model now so we get test data, trian the model and test on the test data we got and then we graph and compare score
+    test_start_date = "2025-01-01"
+    test_end_date = "2025-11-01"
+
+
+  
     
     prices = fetch_stock_data(ticker, start_date, end_date)
     # We need the training data (X) to calculate scores
@@ -222,6 +253,18 @@ if __name__ == "__main__":
 
     print("="*40 + "\n")
     interpret_and_graph(model, hidden_states, prices, returns)
+
+    test_log_returns = np.log(fetch_stock_data(ticker, test_start_date, test_end_date) / fetch_stock_data(ticker, test_start_date, test_end_date).shift(1)).dropna()
+    X_test = test_log_returns.values.reshape(-1, 1)
+
+    # we use viterbi to predict the hidden states for the test data
+    hidden_states_test = model.predict(X_test)
+    test_score = model.score(X_test)
+
+    # plot the test data with the hidden states
+    interpret_and_graph_test(model, hidden_states_test, fetch_stock_data(ticker, test_start_date, test_end_date), test_log_returns)
+
+
 
     #for 5 state
     model, hidden_states, returns = fit_hmm_model_5(prices)
