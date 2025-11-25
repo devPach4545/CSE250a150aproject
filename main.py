@@ -97,7 +97,6 @@ def interpret_and_graph_state_5(model, hidden_states, prices, returns):
     for hidden_state in hidden_states:
         new_states.append(map_states[hidden_state])
     new_states = np.array(new_states)
-    print(hidden_states)
 
     colors = ['green', 'lightgreen', 'orange', 'red', 'darkred']
     plt.figure(figsize=(15, 8))
@@ -123,7 +122,6 @@ def interpret_and_graph_state_2(model, hidden_states, prices, returns):
     for hidden_state in hidden_states:
         new_states.append(map_states[hidden_state])
     new_states = np.array(new_states)
-    print(hidden_states)
 
     colors = ['green', 'red']
     plt.figure(figsize=(15, 8))
@@ -152,7 +150,6 @@ def interpret_and_graph(model, hidden_states, prices, returns):
     for hidden_state in hidden_states:
         new_states.append(map_states[hidden_state])
     new_states = np.array(new_states)
-    print(hidden_states)
 
     colors = ['green', 'orange', 'red']
     plt.figure(figsize=(15, 8))
@@ -172,8 +169,58 @@ if __name__ == "__main__":
     end_date = "2025-01-01"
     
     prices = fetch_stock_data(ticker, start_date, end_date)
-    
+    # We need the training data (X) to calculate scores
+    log_returns = np.log(prices / prices.shift(1)).dropna()
+    X = log_returns.values.reshape(-1, 1)
+
+    print("\n" + "="*40)
+    print(f"{'N_States':<10} | {'Log-Likelihood':<20}")
+    print("-" * 40)
+
+    for n in [2, 3, 5]:
+        best_score = -np.inf
+        
+        for i in range(10):
+            model, hidden_states, returns = fit_hmm_model(prices, n_states=n)
+            score = model.score(X)
+            if score > best_score:
+                best_score = score
+        
+        print(f"{n:<10} | {best_score:<20.4f}")
+
+
+
+    # Let's find the parameters for 3 state HMM
+    print("="*40 + "\n")
     model, hidden_states, returns = fit_hmm_model(prices)
+
+    print(" 3 State HMM Parameters ")
+    print("="*40)
+
+    # get model mean and var
+    means = model.means_.flatten()
+    variances = model.covars_.flatten()
+    
+    std_devs = np.sqrt(variances)
+    sorted_indices = np.argsort(std_devs)
+
+    print("\nState Parameters (sorted by volatility):")
+    print(f"{'State':<10} | {'Mean':<15} | {'Variance':<15} | {'Std Dev':<15}")
+    print("-" * 60)
+    for i, idx in enumerate(sorted_indices):
+        print(f"{i:<10} | {means[idx]:<15.6f} | {variances[idx]:<15.6f} | {std_devs[idx]:<15.6f}")
+    
+    print("\nTransition Matrix:")
+    print("-" * 40)
+    transition_matrix = model.transmat_
+    for i in range(model.n_components):
+        row_str = " | ".join([f"{transition_matrix[i][j]:.4f}" for j in range(model.n_components)])
+        print(f"State {i}: [{row_str}]")
+    
+
+
+
+    print("="*40 + "\n")
     interpret_and_graph(model, hidden_states, prices, returns)
 
     #for 5 state
@@ -183,3 +230,6 @@ if __name__ == "__main__":
     #for 2 state
     model, hidden_states, returns = fit_hmm_model_2(prices)
     interpret_and_graph_state_2(model, hidden_states, prices, returns)
+
+
+    # USE OF AI: Dhaivat: I HAVE USED AI TO GENERATE TABLEs, transition matrix, and formatting that.
