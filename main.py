@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from hmmlearn import hmm
+from scipy.stats import norm
 
 def fetch_stock_data(ticker, start_date, end_date):
     print(f"Downloading data for {ticker} from {start_date} to {end_date}...")
@@ -240,6 +241,24 @@ if __name__ == "__main__":
     print("-" * 60)
     for i, idx in enumerate(sorted_indices):
         print(f"{i:<10} | {means[idx]:<15.6f} | {variances[idx]:<15.6f} | {std_devs[idx]:<15.6f}")
+
+    print("\nPlotting Gaussians per Latent State")
+
+    for i, idx in enumerate(sorted_indices):
+        mean = means[idx]
+        std_dev = np.sqrt(variances[idx])
+        x = np.linspace(mean - 4 * std_dev, mean + 4 * std_dev, 500)
+        y = norm.pdf(x, loc=mean, scale=std_dev)
+        plt.plot(x, y, label=f'State {idx}', linewidth=2)
+
+    plt.title('Gaussian Distributions per Latent State', fontsize=14)
+    plt.xlabel('Value', fontsize=12)
+    plt.ylabel('Probability Density', fontsize=12)
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.savefig('latent_factor_gaussians.png')
+
+
     
     print("\nTransition Matrix:")
     print("-" * 40)
