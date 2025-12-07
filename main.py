@@ -249,7 +249,7 @@ if __name__ == "__main__":
         std_dev = np.sqrt(variances[idx])
         x = np.linspace(mean - 4 * std_dev, mean + 4 * std_dev, 500)
         y = norm.pdf(x, loc=mean, scale=std_dev)
-        plt.plot(x, y, label=f'State {idx}', linewidth=2)
+        plt.plot(x, y, label=f'State {i}', linewidth=2)
 
     plt.title('Gaussian Distributions per Latent State', fontsize=14)
     plt.xlabel('Value', fontsize=12)
